@@ -12,3 +12,7 @@ $RECYCLE.BIN/
 
 # Node.js
 node_modules/
+
+# 微信小程序敏感配置
+project.config.json
+project.private.config.json
