@@ -1,0 +1,631 @@
+<wxs module="u" src="./index.wxs" />
+
+<!-- 习惯打卡 - 主页面 -->
+<scroll-view
+  class="page {{stg.theme==='dark'?'dark':''}}"
+  scroll-y
+  enhanced
+  show-scrollbar="{{false}}"
+  style="height:100vh; --p:{{stg.accent}}; --hbg:{{stg.accent}}; --pomo:{{stg.accent}}; --wdft:{{stg.accent}}">
+
+  <!-- 状态栏占位 -->
+  <view style="height:{{statusBarHeight}}px"></view>
+
+  <!-- ===== 顶栏 ===== -->
+  <view class="topbar">
+    <view class="topbar-left">
+      <view class="title" bindtap="openDashboard">习惯</view>
+      <view class="greeting-row">
+        <text class="greeting">{{greeting}}</text>
+        <text class="subtitle">已连续 <text class="hl">{{apDays}}</text> 天</text>
+      </view>
+    </view>
+    <view class="topbar-btns">
+      <view class="iconbtn" bindtap="openPomodoro">🍅</view>
+      <view class="iconbtn" bindtap="openDashboard">📊</view>
+      <view class="iconbtn" bindtap="openSettings">⚙</view>
+    </view>
+  </view>
+
+
+  <!-- ===== 进度卡片 ===== -->
+  <view class="head">
+    <view class="head-row">
+      <text class="head-time">{{clockStr}}</text>
+      <text class="head-icon">🔔</text>
+    </view>
+    <view class="head-row" style="margin-bottom:2px">
+      <text class="head-quote">{{dailyQuote}}</text>
+    </view>
+    <view class="head-progress">
+      <text class="head-title">{{progressTitle}}</text>
+      <text class="head-count">{{doneCount}}/{{totalCount}}</text>
+    </view>
+    <view class="progress-bar">
+      <view class="progress-fill" style="{{progressStyle}}"></view>
+    </view>
+    <text class="head-sub">{{progressSub}}</text>
+  </view>
+
+
+  <!-- ===== 搜索 ===== -->
+  <view class="search-box">
+    <text class="search-icon">🔍</text>
+    <input class="search-input"
+           placeholder="搜索习惯..."
+           maxlength="20"
+           bindinput="onSearchInput"
+           bindconfirm="onSearchConfirm"
+           confirm-type="search" />
+    <text class="search-clear {{searchText?'show':''}}"
+          bindtap="clearSearch">✕</text>
+  </view>
+
+
+  <!-- ===== 本周圆点 ===== -->
+  <view class="week-section">
+    <view class="week-header">
+      <text class="section-label">本周</text>
+      <view class="week-links">
+        <text class="link" bindtap="openCatchup">补打卡</text>
+        <text class="link" bindtap="openReport">周报</text>
+        <text class="link" bindtap="openCalendar">日历</text>
+      </view>
+    </view>
+    <view class="week-dots">
+      <view wx:for="{{weekDots}}" wx:key="index"
+            class="dot-col" bindtap="showDayTip" data-idx="{{index}}">
+        <text class="dot-name">{{item.name}}</text>
+        <view class="dot {{item.cls}}">
+          <text wx:if="{{item.label}}">{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+
+  <!-- ===== 分类筛选 ===== -->
+  <view class="cat-bar">
+    <scroll-view class="cat-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="cat-chip {{!filterCat?'active':''}}"
+            bindtap="setFilter" data-cat="">全部</view>
+      <view wx:for="{{cats}}" wx:key="*this"
+            class="cat-chip {{filterCat===item?'active':''}}"
+            bindtap="setFilter" data-cat="{{item}}">{{item}}</view>
+    </scroll-view>
+    <view class="cat-add" bindtap="openCategoryManager">+分类</view>
+  </view>
+
+
+  <!-- ===== 习惯列表 ===== -->
+  <view class="habit-list">
+    <view wx:if="{{filteredHabits.length===0}}" class="empty">
+      <text wx:if="{{searchText}}">无「{{searchText}}」结果</text>
+      <text wx:else>尚无习惯，从下方添加</text>
+    </view>
+
+    <view wx:for="{{filteredHabits}}" wx:key="id"
+          class="habit-item {{itemAnimations[item.id] ? 'reordering' : ''}} {{u.getCatClass(item.category)}} {{item.spark > 10 ? 'spark-high' : ''}}"
+          data-id="{{item.id}}" style="{{itemAnimations[item.id] ? 'transform: translateY(' + itemAnimations[item.id].moveDistance + 'px); opacity: 0.8;' : ''}}">
+      <!-- 勾选 -->
+      <view class="check {{item._checked?'checked':''}}"
+            bindtap="toggleCheckin" data-id="{{item.id}}"></view>
+
+      <!-- 内容 -->
+      <view class="habit-body">
+        <!-- 编辑态 -->
+        <input wx:if="{{editingId===item.id}}"
+               class="edit-input"
+               value="{{editingName}}"
+               bindinput="onEditInput"
+               bindblur="saveRename"
+               bindconfirm="saveRename"
+               focus
+               maxlength="30" />
+        <!-- 正常态 -->
+        <text wx:else class="habit-name" bindtap="onNameTap" catchlongpress="startEdit"
+              data-id="{{item.id}}" data-name="{{item.name}}">{{item.name}}</text>
+
+        <view class="habit-tags">
+          <text wx:if="{{item.difficulty>0}}" class="tag-diff">
+            <text wx:for="{{item.difficulty}}" wx:for-item="s" wx:key="*this">⭐</text>
+          </text>
+          <text wx:if="{{item.category}}" class="tag-cat">{{item.category}}</text>
+          <text wx:if="{{item._weeklyGoal}}" class="tag-goal {{item._goalMissed?'missed':''}}">🎯周{{item._weeklyGoal}}{{item._goalDone?'✓':''}}</text>
+        </view>
+
+        <text class="streak">
+          <text class="streak-num {{item._checked?'done':'missed'}}">{{item._streak}}</text>
+          <text class="streak-fire {{item._checked?'done':'missed'}}">🔥</text>
+        </text>
+      </view>
+
+      <!-- 操作 -->
+      <view class="habit-actions">
+        <view class="habit-info" bindtap="openDetail" data-id="{{item.id}}">📊</view>
+        <view class="habit-cat-btn" bindtap="openCatPicker" data-id="{{item.id}}">🏷️</view>
+        <view class="habit-del" bindtap="confirmDeleteHabit" data-id="{{item.id}}" data-name="{{item.name}}">🗑</view>
+      </view>
+    </view>
+  </view>
+
+
+  <!-- ===== 统计卡片 ===== -->
+  <view class="stats-row">
+    <view class="stat-card"><text class="stat-num">{{totalHabits}}</text><text class="stat-label">总习惯</text></view>
+    <view class="stat-card"><text class="stat-num">{{doneCount}}</text><text class="stat-label">今日</text></view>
+    <view class="stat-card"><text class="stat-num">{{weekTotal}}</text><text class="stat-label">本周</text></view>
+    <view class="stat-card"><text class="stat-num">{{progressPercent}}%</text><text class="stat-label">完成率</text></view>
+  </view>
+
+
+  <!-- ===== 建议 ===== -->
+  <view class="sug-row" wx:if="{{suggestions.length>0}}">
+    <view wx:for="{{suggestions}}" wx:key="*this"
+          class="sug-chip" bindtap="addSuggestion" data-name="{{item}}">+ {{item}}</view>
+  </view>
+
+
+  <!-- ===== 添加习惯 ===== -->
+  <view class="add-row">
+    <input class="add-input"
+           placeholder="添加新习惯"
+           maxlength="30"
+           bindinput="onNewHabitInput"
+           bindconfirm="doAddHabit"
+           confirm-type="done" />
+    <button class="add-btn" bindtap="doAddHabit">记下</button>
+  </view>
+
+</scroll-view>
+
+
+
+
+<!-- ============================================================= -->
+<!-- 弹窗区域 -->
+<!-- ============================================================= -->
+
+
+<!-- ===== 设置弹窗 ===== -->
+<view class="overlay {{showSettings?'show':''}}" bindtap="closeSettingsOverlay">
+  <view class="modal" catchtap="stopProp">
+    <view class="modal-close" bindtap="closeSettings">✕</view>
+    <view class="modal-title">设置</view>
+
+    <!-- 外观 -->
+    <view class="sec">
+      <view class="sec-title">外观</view>
+      <view class="row" bindtap="toggleTheme">
+        <text>深色模式</text>
+        <view class="toggle {{stg.theme==='dark'?'on':''}}"><view class="toggle-knob"></view></view>
+      </view>
+      <view class="row" style="align-items:flex-start">
+        <text style="margin-top:4px">主题色</text>
+        <view style="display:flex;gap:6px;flex-wrap:wrap">
+          <view wx:for="{{themeColors}}" wx:key="*this"
+                class="color-dot"
+                style="background:{{item}};{{stg.accent===item?'border:2px solid #333':'border:2px solid transparent'}}"
+                bindtap="setAccent" data-color="{{item}}"></view>
+        </view>
+      </view>
+    </view>
+
+
+    <!-- 音效 -->
+    <view class="sec">
+      <view class="sec-title">音效</view>
+      <view class="row" bindtap="toggleSound">
+        <text>打卡音效</text>
+        <view class="toggle {{sndEnabled?'on':''}}"><view class="toggle-knob"></view></view>
+      </view>
+      <view class="row" bindtap="toggleVibration">
+        <text>番茄钟振动</text>
+        <view class="toggle {{pVibEnabled?'on':''}}"><view class="toggle-knob"></view></view>
+      </view>
+    </view>
+
+    <!-- 分类 -->
+    <view class="sec">
+      <view class="sec-title">分类</view>
+      <view class="row" bindtap="openCategoryManagerFromSettings">
+        <text>管理分类</text>
+        <text style="color:var(--text-faint);font-size:13px">></text>
+      </view>
+    </view>
+
+    <!-- 重置 -->
+    <view class="sec">
+      <view class="sec-title">数据</view>
+      <view class="row" style="color:var(--dng)" bindtap="resetAll">
+        <text>重置所有数据</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+
+
+
+<!-- ===== 详情弹窗 ===== -->
+<view class="overlay {{showDetail?'show':''}}" bindtap="closeDetailOverlay">
+  <view class="modal" catchtap="stopProp">
+    <view class="modal-close" bindtap="closeDetail">✕</view>
+    <view class="modal-title">{{detailHabit.name}}</view>
+
+    <!-- 统计 -->
+    <view class="detail-stats">
+      <view class="detail-stat"><text class="ds-num">{{detailStreak}}</text><text class="ds-lbl">连续</text></view>
+      <view class="detail-stat"><text class="ds-num">{{detailBestStreak}}</text><text class="ds-lbl">最佳</text></view>
+      <view class="detail-stat"><text class="ds-num">{{detailTotal}}</text><text class="ds-lbl">总计</text></view>
+    </view>
+
+    <!-- 难度 -->
+    <view class="sec">
+      <view class="sec-title">难度</view>
+      <view class="diff-row">
+        <view wx:for="{{[1,2,3,4,5]}}" wx:key="*this"
+              class="diff-star {{item<=detailDifficulty?'active':''}}"
+              bindtap="setDifficulty" data-id="{{detailId}}" data-level="{{item}}">⭐</view>
+      </view>
+    </view>
+
+    <!-- 周目标 -->
+    <view class="sec">
+      <view class="sec-title">🎯 周目标</view>
+      <picker range="{{goalOptions}}" value="{{currentGoalLabel}}" bindchange="onGoalChange">
+        <view class="picker-val">{{currentGoalLabel}}</view>
+      </picker>
+    </view>
+
+    <!-- 7日图表 -->
+    <view class="sec">
+      <view class="sec-title">近7日</view>
+      <view class="detail-chart">
+        <view wx:for="{{detailChartStyles}}" wx:key="index" class="dc-bar-wrap">
+          <view class="dc-bar" style="{{item}}"></view>
+          <text class="dc-lbl">{{detailChartLabels[index]}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 备注 -->
+    <view class="sec">
+      <view class="sec-title">今日备注</view>
+      <textarea class="note-input"
+                placeholder="记录今日情况..."
+                value="{{detailNote}}"
+                bindinput="onDetailNoteInput"
+                maxlength="200"
+                auto-height />
+      <button class="btn-primary full" style="margin-top:8px" bindtap="saveDetailNote">保存备注</button>
+    </view>
+
+    <!-- 历史备注 -->
+    <view class="sec" wx:if="{{detailHistory.length>0}}">
+      <view class="sec-title">历史备注</view>
+      <view wx:for="{{detailHistory}}" wx:key="date" class="note-hist">
+        <text class="nh-date">{{item.date}}</text>
+        <text class="nh-text">{{item.note}}</text>
+      </view>
+    </view>
+
+    <!-- 删除习惯 -->
+    <view class="sec" style="margin-top:12px">
+      <view class="row" style="color:var(--dng);justify-content:center" bindtap="confirmDeleteHabit" data-id="{{detailId}}" data-name="{{detailHabit.name}}">
+        <text>🗑 删除此习惯</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+
+
+
+<!-- ===== 数据看板弹窗 ===== -->
+<view class="overlay {{showDashboard?'show':''}}" bindtap="closeDashboardOverlay">
+  <view class="modal" catchtap="stopProp">
+    <view class="modal-close" bindtap="closeDashboard">✕</view>
+    <view class="modal-title">数据看板</view>
+
+    <!-- 总览 -->
+    <view class="dash-summary">
+      <view class="dash-card"><text class="dash-num">{{totalCheckInsAll}}</text><text class="dash-lbl">总打卡</text></view>
+      <view class="dash-card"><text class="dash-num">{{pomoTotal}}</text><text class="dash-lbl">总番茄</text></view>
+      <view class="dash-card"><text class="dash-num">{{achievements.length}}</text><text class="dash-lbl">成就</text></view>
+    </view>
+
+    <!-- 排行 -->
+    <view class="sec">
+      <view class="sec-title">习惯排行</view>
+      <view wx:for="{{rankedHabits}}" wx:key="name" class="rank-row">
+        <text class="rank-name">{{item.name}}</text>
+        <view class="rank-bar-wrap">
+          <view class="rank-bar" style="{{item.barStyle}}"></view>
+        </view>
+        <text class="rank-cnt">{{item.count}}</text>
+      </view>
+      <view wx:if="{{rankedHabits.length===0}}" class="empty-sm">暂无数据</view>
+    </view>
+
+    <!-- 成就 -->
+    <view class="sec">
+      <view class="sec-title">成就（20项）</view>
+      <view class="ach-grid">
+        <view wx:for="{{achievements}}" wx:key="id"
+              class="ach-card {{item.unlocked?'unlocked':'locked'}}">
+          <text class="ach-icon">{{item.ic}}</text>
+          <text class="ach-name">{{item.nm}}</text>
+          <text class="ach-desc">{{item.desc}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+
+
+
+
+<!-- ===== 日历弹窗 ===== -->
+<view class="overlay {{showCalendar?'show':''}}" bindtap="closeCalendarOverlay">
+  <view class="modal" catchtap="stopProp">
+    <view class="modal-close" bindtap="closeCalendar">✕</view>
+    <view class="modal-title">打卡日历</view>
+
+    <view class="cal-nav">
+      <view class="cal-btn" bindtap="prevMonth">‹</view>
+      <text class="cal-title">{{calendarTitle}}</text>
+      <view class="cal-btn" bindtap="nextMonth">›</view>
+    </view>
+
+    <view class="cal-weekdays">
+      <text wx:for="{{['一','二','三','四','五','六','日']}}" wx:key="*this">{{item}}</text>
+    </view>
+
+    <view class="cal-grid">
+      <view wx:for="{{calendarCells}}" wx:key="index"
+            class="cal-cell l{{item.level}} {{item.isToday?'today':''}}"
+            bindtap="showDateTip" data-date="{{item.date}}">
+        <text>{{item.day}}</text>
+        <text wx:if="{{item.count>0}}" class="cal-cnt">{{item.count}}</text>
+      </view>
+    </view>
+
+    <view class="cal-legend">
+      <text>少</text>
+      <view class="cal-dot l0"></view>
+      <view class="cal-dot l1"></view>
+      <view class="cal-dot l2"></view>
+      <view class="cal-dot l3"></view>
+      <view class="cal-dot l4"></view>
+      <text>多</text>
+    </view>
+
+    <text class="cal-summary">{{calendarSummary}}</text>
+  </view>
+</view>
+
+
+
+
+<!-- ===== 周报弹窗 ===== -->
+<view class="overlay {{showReport?'show':''}}" bindtap="closeReportOverlay">
+  <view class="modal" catchtap="stopProp">
+    <view class="modal-close" bindtap="closeReport">✕</view>
+    <view class="modal-title">{{reportIsWeek?'本周报告':'本月报告'}}</view>
+
+    <view wx:if="{{reportData}}">
+      <view class="report-card">
+        <view class="report-row"><text>完成</text><text class="report-val">{{reportData.done}}/{{reportData.total}}（{{reportData.rate}}%）</text></view>
+        <view class="report-row"><text>全勤</text><text class="report-val">{{reportData.fullDays}}天</text></view>
+        <view class="report-row"><text>零打卡</text><text class="report-val">{{reportData.zeroDays}}天</text></view>
+      </view>
+
+      <view class="report-card">
+        <view class="sec-title">各习惯</view>
+        <view wx:for="{{reportData.habits}}" wx:key="name" class="report-row">
+          <text>{{item.name}}</text>
+          <text class="report-val">{{item.done}}/{{reportData.totalDays}}（{{item.rate}}%）</text>
+        </view>
+      </view>
+
+      <view wx:if="{{reportData.bestDay}}" class="report-card">
+        <view class="sec-title">最佳日</view>
+        <view class="report-row">
+          <text>{{reportData.bestDay.date}}</text>
+          <text class="report-val">完成 {{reportData.bestDay.done}}/{{reportData.bestDay.total}}</text>
+        </view>
+      </view>
+
+      <button class="btn-outline" style="margin-top:12px" bindtap="toggleReportMode">{{reportIsWeek?'月报':'周报'}}</button>
+    </view>
+  </view>
+</view>
+
+
+
+
+<!-- ===== 补打卡弹窗 ===== -->
+<view class="overlay {{showCatchup?'show':''}}" bindtap="closeCatchupOverlay">
+  <view class="modal" catchtap="stopProp">
+    <view class="modal-close" bindtap="closeCatchup">✕</view>
+    <view class="modal-title">补打卡</view>
+    <text class="modal-desc">选择习惯和日期</text>
+
+    <picker range="{{catchupHabits}}" range-key="name" bindchange="onCatchupHabitChange">
+      <view class="picker-val">{{catchupSelectedName||'选择习惯'}}</view>
+    </picker>
+
+    <scroll-view scroll-y style="max-height:300px;margin-top:10px">
+      <view wx:for="{{catchupDays}}" wx:key="date"
+            class="catchup-row">
+        <text class="catchup-date">{{item.label}}</text>
+        <text class="catchup-status">{{item.status}}</text>
+        <button class="btn-sm {{item.checked?'done':''}}"
+                disabled="{{item.checked}}"
+                bindtap="doCatchup" data-date="{{item.date}}">
+          {{item.checked?'✓':'补打'}}
+        </button>
+      </view>
+    </scroll-view>
+  </view>
+</view>
+
+
+
+
+
+<!-- ===== 诸事皆毕弹窗 ===== -->
+<view wx:if="{{showAllDonePopup}}" class="all-done-popup">
+  <view class="all-done-content">
+    <text class="all-done-icon">🎉</text>
+    <text class="all-done-title">诸事皆毕</text>
+    <text class="all-done-desc">今日所有习惯已完成
+功不唐捐，日有所进</text>
+    <button class="all-done-btn" bindtap="closeAllDonePopup">💪 太棒了</button>
+  </view>
+</view>
+<!-- ===== 番茄钟弹窗 ===== -->
+<view class="overlay {{showPomodoro?'show':''}}" bindtap="closePomodoroOverlay">
+  <view class="modal modal-pomo" catchtap="stopProp">
+    <view class="modal-close" bindtap="closePomodoro">✕</view>
+    <view class="modal-title">🍅 专注计时</view>
+
+    <!-- 预设 -->
+    <view class="pomo-presets">
+      <view wx:for="{{pomoPresets}}" wx:key="*this"
+            class="pomo-preset {{pomoFocusLen/60===item?'active':''}}"
+            bindtap="setPomoPreset" data-min="{{item}}">{{item}}分</view>
+    </view>
+
+    <!-- 自定义输入 -->
+    <view class="pomo-custom">
+      <input class="pomo-custom-input"
+             type="number"
+             placeholder="分钟"
+             value="{{customPomoMin}}"
+             bindinput="onCustomPomoInput" />
+      <button class="btn-primary sm" bindtap="setCustomPomo">设定</button>
+    </view>
+
+    <!-- 翻牌时钟 -->
+    <view class="flip-clock">
+      <view class="flip-unit">
+        <view class="flip-card"><text>{{pomoMinStr[0]}}</text></view>
+        <view class="flip-card"><text>{{pomoMinStr[1]}}</text></view>
+        <text class="flip-lbl">分</text>
+      </view>
+      <text class="flip-colon">:</text>
+      <view class="flip-unit">
+        <view class="flip-card"><text>{{pomoSecStr[0]}}</text></view>
+        <view class="flip-card"><text>{{pomoSecStr[1]}}</text></view>
+        <text class="flip-lbl">秒</text>
+      </view>
+    </view>
+
+    <!-- 阶段提示 -->
+    <view class="pomo-phase {{pomoPhase==='focus'?'focus':'break'}}">
+      {{pomoPhase==='focus'?'🎯 专注中':'☕ 休息中'}}
+    </view>
+
+    <!-- 控制按钮 -->
+    <view class="pomo-controls">
+      <button class="pomo-btn {{pomoRunning?'pause':'go'}}" bindtap="togglePomo">
+        {{pomoRunning?'⏸ 暂停':'▶ 开始'}}
+      </button>
+      <button wx:if="{{pomoPhase==='break'&&!pomoRunning}}"
+              class="pomo-btn skip" bindtap="skipBreak">⏭ 跳过</button>
+      <button class="pomo-btn reset" bindtap="resetPomo">⟲ 重置</button>
+    </view>
+
+    <text class="pomo-info">今日番茄：{{pomoToday}} | 总番茄：{{pomoTotal}}</text>
+
+    <view class="pomo-log" wx:if="{{pomoLogs.length>0}}">
+      <view wx:for="{{pomoLogs}}" wx:key="time" class="pomo-log-item">
+        🍅 {{item.time}} — {{item.dur}}分钟
+      </view>
+    </view>
+  </view>
+</view>
+
+
+
+
+<!-- ===== 精致确认弹窗 ===== -->
+<view class="overlay {{showConfirm?'show':''}}" bindtap="closeConfirmOverlay">
+  <view class="modal-confirm" catchtap="stopProp">
+    <view class="confirm-anim">
+      <view class="confirm-circle">
+        <text class="confirm-emoji">{{_confirmEmoji}}</text>
+      </view>
+    </view>
+    <text class="confirm-title">{{_confirmTitle}}</text>
+    <text class="confirm-msg">{{confirmText}}</text>
+    <view class="confirm-btns">
+      <view class="confirm-btn cancel" bindtap="cancelConfirm">取消</view>
+      <view class="confirm-btn ok {{_confirmDanger?'danger':''}}" bindtap="doConfirm">确定</view>
+    </view>
+  </view>
+</view>
+
+
+
+
+  <!-- ===== 分类选择弹窗（单个习惯） ===== -->
+  <view class="overlay {{showCatPicker?'show':''}}" bindtap="closeCatPickerOverlay">
+    <view class="modal" catchtap="stopProp">
+      <view class="modal-close" bindtap="closeCatPicker">✕</view>
+      <view class="modal-title">设置分类</view>
+      <view class="modal-sub">{{catPickerName}}</view>
+      <view class="cat-picker-list">
+        <view class="cat-pick-item {{catPickerCur===''?'active':''}}" bindtap="pickCategory" data-cat="">📁 无分类</view>
+        <view wx:for="{{cats}}" wx:key="*this"
+              class="cat-pick-item {{catPickerCur===item?'active':''}}"
+              bindtap="pickCategory" data-cat="{{item}}">{{item}}</view>
+      </view>
+      <view class="modal-btn-row">
+        <view class="modal-btn" bindtap="openCategoryManagerFromPicker">管理分类</view>
+      </view>
+    </view>
+  </view>
+
+<!-- ===== 分类管理弹窗 ===== -->
+<view class="overlay {{showCategoryManager?'show':''}}" bindtap="closeCategoryManagerOverlay">
+  <view class="modal" catchtap="stopProp">
+    <view class="modal-close" bindtap="closeCategoryManager">✕</view>
+    <view class="modal-title">分类管理</view>
+
+    <!-- 添加 -->
+    <view class="cat-add-row">
+      <input class="cat-input"
+             placeholder="新分类名称"
+             value="{{newCatName}}"
+             bindinput="onNewCatInput"
+             bindconfirm="addCategory" />
+      <button class="btn-primary sm" bindtap="addCategory">添加</button>
+    </view>
+
+    <!-- 列表 -->
+    <view class="sec">
+      <view class="sec-title">已有分类（点击删除）</view>
+      <view wx:if="{{cats.length===0}}" class="empty-sm">暂无分类</view>
+      <view wx:for="{{cats}}" wx:key="*this"
+            class="cat-item"
+            bindtap="deleteCategory" data-cat="{{item}}">
+        <text>{{item}}</text>
+        <text class="cat-del">✕</text>
+      </view>
+    </view>
+
+    <!-- 颜色说明 -->
+    <view class="sec">
+      <view class="sec-title">分类颜色</view>
+      <view class="cat-color-demo">
+        <view wx:for="{{cats}}" wx:key="*this"
+              class="cat-demo-item {{u.getCatClass(item)}}">
+          {{item}}
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

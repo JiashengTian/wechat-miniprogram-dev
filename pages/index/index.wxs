@@ -1,0 +1,24 @@
+/**
+ * WXS 辅助函数 - 仅处理无需 Date 对象的简单计算
+ * 注意：WXS 不支持 new Date()、Date.parse() 等标准 JS Date API
+ * 所有日期相关的计算已在 JS 层预计算完毕
+ */
+var utils = {
+  getCatClass: function(cat) {
+    var m = {
+      '健康': 'cat-jk',
+      '学习': 'cat-xx',
+      '工作': 'cat-gz',
+      '生活': 'cat-sh',
+      '运动': 'cat-yd',
+      '阅读': 'cat-yued',
+      '饮食': 'cat-ys',
+      '美妆': 'cat-mz',
+      '兴趣': 'cat-xq',
+      '其他': 'cat-qt'
+    }
+    return m[cat] || 'cat-qt'
+  }
+}
+
+module.exports = utils

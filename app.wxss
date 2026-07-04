@@ -1,0 +1,51 @@
+/* 全局样式 — 习惯打卡 */
+page {
+  /* === 浅色主题变量 === */
+  --bg:       #f5f0eb;
+  --text:     #2b2b2b;
+  --text-muted: #7a6542;
+  --text-faint: #a89880;
+  --card:      #ffffff;
+  --card-s:    rgba(0,0,0,0.06);
+  --p:        #4a3f35;   /* 主题色（由 JS 动态覆盖） */
+  --pl:       #5a4f45;
+  --pt:       #f5f0eb;   /* 主题色上的文字 */
+  --border:   #ddd4c8;
+  --bl:       #e8e0d4;
+  --acc:      #d35400;
+  --acc2:     #e67e22;
+  --dng:      #c0392b;
+  --dngb:     #fdecea;
+  --suc:      #27ae60;
+  --sucb:     #e8f5e9;
+  --hb:       #f5f0e8;   /* 浅灰底 */
+  --glass:     rgba(255,255,255,0.96);
+  --ov:       rgba(0,0,0,0.35);
+  --wdb:      #d4d0cb;
+  --wdbg:     #ffffff;
+  --wdf:      #4a3f35;
+  --wdft:     #f5f0eb;
+  --inp:      #ffffff;
+  --hbg:      #4a3f35;
+  --htx:      #f5f0eb;
+  --spd:      #e67e22;
+  --spm:      #b8a888;
+  --h0:       #f5f0e8;
+  --h1:       #e8f5e9;
+  --h2:       #a5d6a7;
+  --h3:       #66bb6a;
+  --h4:       #2e7d32;
+  --togbg:    #d4d0cb;
+  --pomo:     #e74c3c;
+  --charttext: #555555;
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.65;
+  letter-spacing: 0.025em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
